@@ -20,7 +20,7 @@ DR:
     same roles as for 1st infra.
 
 Monitoring:
-1 ubuntu machine with zabbix (prometey?) showing resource usage for prod and DR. web service.
+1 ubuntu machine with grafana (prometey?) showing resource usage for prod and DR. web service.
 
 Ansible:
 1 ubuntu server with ansible services responsible for deploying infra.
@@ -44,6 +44,28 @@ Ansible hosts:
     host5
     
 ### 3. Deploying machines
+
+To deploy AWS EC2 instances it was choosen to use awscli.
+These steps might be automized later and be used for deploying in scripts.
+#### 1st installing AWS.
+[AWS CLI reffeernce](https://docs.aws.amazon.com/cli/latest/reference/ec2/index.html)
+```bash
+~: sudo apt install awscli
+~: aws configure
+AWS Access Key ID [None]: ******
+AWS Secret Access Key [None]: ****
+Default region name [None]:  eu-central-1
+Default output format [None]: json
+```
+Using **Access Key ID** and **Secret Access Key** from AWS IAM - Users - Security credentials.
+[Region names are available zones](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.RegionsAndAvailabilityZones.html)
+[Output formats](https://docs.aws.amazon.com/cli/latest/userguide/cli-usage-output-format.html)
+
+also [installing jq](https://stedolan.github.io/jq/) to work with json output - will be needed for variables. 
+```bash 
+~: sudo apt get install jq
+```
+
 
 ### 4. Setting up ansible
 
