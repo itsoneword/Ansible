@@ -34,17 +34,14 @@ all VMs are deployed with masterKey (should be enabled later?)
    * python    (python packs check ?)
 
 #### Ansible hosts:
-[prod]
-
-    host1
-    host2
-[DR]
-
-    host3
-    host4
-[Monitoring]
-
-    host5
+	[prod]
+		host1
+		host2
+	[DR]
+		host3
+		host4
+	[Monitoring]
+		host5
     
 ### 3. Deploying machines
 
