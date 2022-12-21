@@ -1,6 +1,4 @@
-# Ansible
-
-deploying web services on AWS  with ansible
+# deploying web services on AWS via ansible
 
 
 ### 1. Structure
