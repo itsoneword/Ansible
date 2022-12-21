@@ -1,4 +1,4 @@
-# deploying web services on AWS via ansible
+# Deploying EC2 instances on AWS via ansible
 
 
 ### 1. Structure
