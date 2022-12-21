@@ -35,12 +35,15 @@ all VMs are deployed with masterKey (should be enabled later?)
 
 #### Ansible hosts:
 [prod]
+
     host1
     host2
 [DR]
+
     host3
     host4
 [Monitoring]
+
     host5
     
 ### 3. Deploying machines
@@ -48,6 +51,7 @@ all VMs are deployed with masterKey (should be enabled later?)
 To deploy AWS EC2 instances it was choosen to use awscli.
 These steps might be automized later and be used for deploying in scripts.
 #### 3.1 1st installing AWS cli : [AWS CLI refference](https://docs.aws.amazon.com/cli/latest/reference/ec2/index.html)
+
 ```bash
 	$ sudo apt install awscli
 	$ aws configure
@@ -55,13 +59,15 @@ These steps might be automized later and be used for deploying in scripts.
 		AWS Secret Access Key [None]: ****
 		Default region name [None]:  eu-central-1
 		Default output format [None]: json
-	```
+```
+
 Using **Access Key ID** and **Secret Access Key** from `AWS IAM - Users - Security credentials`.
 [Region names and available zones](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.RegionsAndAvailabilityZones.html)
 
 [Output formats](https://docs.aws.amazon.com/cli/latest/userguide/cli-usage-output-format.html)
 
 also [installing jq](https://stedolan.github.io/jq/) to work with json output - will be needed for variables. 
+
 ```bash 
 	$ sudo apt get install jq
 ```
