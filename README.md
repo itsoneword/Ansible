@@ -62,11 +62,12 @@ These steps might be automized later and be used for deploying in scripts.
 ```
 
 Using **Access Key ID** and **Secret Access Key** from `AWS IAM - Users - Security credentials`.
+
 [Region names and available zones](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.RegionsAndAvailabilityZones.html)
 
 [Output formats](https://docs.aws.amazon.com/cli/latest/userguide/cli-usage-output-format.html)
 
-also [installing jq](https://stedolan.github.io/jq/) to work with json output - will be needed for variables. 
+also `[installing jq](https://stedolan.github.io/jq/)` to work with json output - will be needed for variables. 
 
 ```bash 
 	$ sudo apt get install jq
@@ -110,12 +111,12 @@ $ aws ec2 create-vpc --cidr-block 192.168.20.0/24
 		}
 	}
 
-#and I would recommend to store vpcid in the variable and config file right after that:
+#and I would recommend to store vpcid into the variable and config file right after that:
 $ aws ec2 describe-vpcs --filters Name=cidr,Values=192.168.20.0/24 | jq -r '.Vpcs | .[] | .VpcId'
-
+#Output:
 vpc-00756859b9e6628fb
+
 #we can also use variables for the filter, saving there cidr brfore: cidr=192.168.20.0/24
-#Please, be accurate with quotes.
 
 $ awsvpcid=$(aws ec2 describe-vpcs --filters "Name=cidr,Values=192.168.20.0/24" | jq -r '.Vpcs | .[] | .VpcId')
 
@@ -129,7 +130,7 @@ $ echo vpcid : $awsvpcid >> awsConfig/awsdeploy.log
 
 ```
 
-all right, we have VPC created, and data stored in vars and config file. Let's now create 2 subnets:
+all right, we have created our VPC, and stored IDs in variable and config file. Let's now create a subnet:
 
 ```bash
 $ aws ec2 create-subnet --vpc-id $awsvpcid --cidr-block 192.168.20.0/26
@@ -166,12 +167,13 @@ $ echo SubnetId1 : $awssubnetid1 >> awsConfig/awsdeploy.log
 ```
 #### Creating Internet Gateway and routing tables
 
-Next, we need to deploy Gateway for our VPC. But the problem is - by default it is not assigned to any other objects, so we need to somehow figure out its ID. We can use tags for that, but its not really conviniet as far as the same tag can be assigned to 2 different objects. So, the best way here is to get the ID right after the execution:
+Next, we need to deploy Gateway for VPC. But the problem is - by default it is not assigned to any other objects, so we need to somehow figure out its ID. We can use tags for that, but its not really conviniet as far as the same tag can be assigned to 2 different objects. So, the best way here is to get the ID right after the execution:
 
 ```bash
 $ awsigwid=$(aws ec2 create-internet-gateway | jq -r '.InternetGateway | .InternetGatewayId')
 
-#There will be no output, as far as it goes to filter and then straight to the variable, but just for information output looks like that:
+#There will be no output, as far as it goes to filter and then straight to the variable, 
+#but just for the refference it looks like that:
 	{
 	"InternetGateway": {
 		"Attachments": [],
@@ -185,36 +187,37 @@ $ awsigwid=$(aws ec2 create-internet-gateway | jq -r '.InternetGateway | .Intern
 $ echo internetGateWayID : $awsigwid >> awsConfig/awsdeploy.log
 
 ```
-Once new GW is created - we need to assign it to our VPC:
+Once new GW is created - we need to assign it to VPC:
 
 ```bash
 $ aws ec2 attach-internet-gateway --vpc-id $awsvpcid --internet-gateway-id $awsigwid
 
 ```
-and create route -ables:
+and create route-table:
 
 ```bash
 $ aws ec2 create-route-table --vpc-id $awsvpcid
 #Output
 {
-	"RouteTable": {
-		"Associations": [],
-		"PropagatingVgws": [],
-		"RouteTableId": "rtb-03b29e8e92d817b8a",
-		"Routes": [
-			{
-			"DestinationCidrBlock": "192.168.10.0/24",
-			"GatewayId": "local",
-			"Origin": "CreateRouteTable",
-			"State": "active"
-			}
-			],
-		"Tags": [],
-		"VpcId": "vpc-00756859b9e6628fb",
-		"OwnerId": "746002417955"
+"RouteTable": {
+	"Associations": [],
+	"PropagatingVgws": [],
+	"RouteTableId": "rtb-03b29e8e92d817b8a",
+	"Routes": [
+		{
+		"DestinationCidrBlock": "192.168.10.0/24",
+		"GatewayId": "local",
+		"Origin": "CreateRouteTable",
+		"State": "active"
 		}
+		],
+	"Tags": [],
+	"VpcId": "vpc-00756859b9e6628fb",
+	"OwnerId": "746002417955"
 	}
-#assign table id to variable and store into config file:
+}
+
+#assign table id to variable and store into config log:
 awsrtid=$(aws ec2 create-route-table --vpc-id $awsvpcid | jq -r '.RouteTable | .RouteTableId ' )
 echo routeTableId : $awsrtid >> awsConfig/awsdeploy.log
 
@@ -230,7 +233,7 @@ $ aws ec2 associate-route-table --subnet-id $awssubnetid1 --route-table-id $awsr
 	}
 #assign public IDs to subnet:
 
-$ aws ec2 modify-subnet-attribute --subnet-id <SubnetId> --map-public-ip-on-launch
+$ aws ec2 modify-subnet-attribute --subnet-id $awssubnetid1 --map-public-ip-on-launch
 ```
 
 Almost done. we only need to create key pair for login and allow ssh (and http if needed):
@@ -250,21 +253,21 @@ $ echo securityGroupId : $awssgid >> awsConfig/awsdeploy.log
 #Enabling the settings (all IPs via 22 port) for created group:
 $ aws ec2 authorize-security-group-ingress --group-id $awssgid  --protocol tcp --port 22 --cidr 0.0.0.0/0
 #oiutput example:
+{
+	"Return": true,
+	"SecurityGroupRules": [
 	{
-		"Return": true,
-		"SecurityGroupRules": [
-		{
-			"SecurityGroupRuleId": "sgr-07f6d01b908482133",
-			"GroupId": "sg-034bceb76fae44ec5",
-			"GroupOwnerId": "746002417955",
-			"IsEgress": false,
-			"IpProtocol": "tcp",
-			"FromPort": 22,
-			"ToPort": 22,
-			"CidrIpv4": "0.0.0.0/0"
-		}
-		]
+		"SecurityGroupRuleId": "sgr-07f6d01b908482133",
+		"GroupId": "sg-034bceb76fae44ec5",
+		"GroupOwnerId": "746002417955",
+		"IsEgress": false,
+		"IpProtocol": "tcp",
+		"FromPort": 22,
+		"ToPort": 22,
+		"CidrIpv4": "0.0.0.0/0"
 	}
+	]
+}
 ```
 
 
