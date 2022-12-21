@@ -77,12 +77,13 @@ All right, the process of creating infrastructure is the following:
  6. Creating VM instance.
 
 During the procedure it would make sence to store some data as variables - it would help us in future infrastructure understenting.
+#### 3.2Configuring network
 So, starting with creating VPC:
 
 ```bash
 ~: aws ec2 create-vpc --cidr-block 192.168.20.0/24 
-#where --cidr-block is the IP range of available by provate cloud addresses
-#The output suppose to be in the following format:
+#where --cidr-block is the IP range of available by private cloud addresses
+#Output
 {
 "Vpc": {
 		"CidrBlock": "192.168.10.0/24",
@@ -106,14 +107,65 @@ So, starting with creating VPC:
 }
 
 #and I would recommend to store vpcid in the variable and config file right after that:
-~: aws ec2 describe-vpcs --filters Name=cidr,Values=192.168.20.0/24 | jq -r '.Vpcs | .[] | .VpcId’
+~: aws ec2 describe-vpcs --filters Name=cidr,Values=192.168.20.0/24 | jq -r '.Vpcs | .[] | .VpcId'
 
+vpc-00756859b9e6628fb
 #we can also use variables for the filter, saving there cidr brfore: cidr=192.168.20.0/24
+#Please, be accurate with quotes.
+
+~:  awsvpcid=$(aws ec2 describe-vpcs --filters "Name=cidr,Values=192.168.20.0/24" | jq -r '.Vpcs | .[] | .VpcId')
+
+
+#Then storing data to the config file, just in case:
+~: cd ~
+~: mkdir awsConfig
+~: touch awsConfig//awsdeploy.log
+~: echo $(date), user=$USER >> awsConfig/awsdeploy.log
+~: echo vpcid : $awsvpcid >> awsConfig/awsdeploy.log
+
+```
+
+all right, we have VPC created, and data stored in vars and config file. Let's now create 2 subnets:
+
+```bash
+~: aws ec2 create-subnet --vpc-id $awsvpcid --cidr-block 192.168.20.0/26
+
+#Output:
+{
+"Subnet": {
+		"AvailabilityZone": "eu-central-1c",
+		"AvailabilityZoneId": "euc1-az1",
+		"AvailableIpAddressCount": 59,
+		"CidrBlock": "192.168.10.0/26",
+		"DefaultForAz": false,
+		"MapPublicIpOnLaunch": false,
+		"State": "available",
+		"SubnetId": "subnet-01bad4acbbef2bd1f",
+		"VpcId": "vpc-00756859b9e6628fb",
+		"OwnerId": "746002417955",
+		"AssignIpv6AddressOnCreation": false,
+		"Ipv6CidrBlockAssociationSet": [],
+		"SubnetArn": "arn:aws:ec2:eu-central-1:746002417955:subnet/subnet-01bad4acbbef2bd1f",
+		"EnableDns64": false,
+		"Ipv6Native": false,
+		"PrivateDnsNameOptionsOnLaunch": {
+				"HostnameType": "ip-name",
+				"EnableResourceNameDnsARecord": false,
+				"EnableResourceNameDnsAAAARecord": false
+				}
+}
+}
+
+#Store IDs into vars:
+~: awssubnetid1=$(aws ec2 describe-subnets --filters Name=vpc-id,Values=$awsvpcid | jq -r '.Subnets |.[] |.SubnetId')
+~: echo SubnetId1 : $awssubnetid1 >> awsConfig/awsdeploy.log
+
+
 
 ```
 
 
-#### 3.2Configuring network
+
 
 ### 4. Setting up ansible
 
