@@ -1,0 +1,35 @@
+---
+- name: Deploy EC2 instance on AWS
+  vars_files:
+    - /home/ubuntu/ansible/aws-credentials
+    - /home/ubuntu/ansible/variables.yml
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ aws_secret_key }}"
+  hosts: localhost
+  connection: local
+  become: true
+  gather_facts: false
+  roles:
+    - aws_auth
+    #- deployVPC
+    #- deploySubnet
+    #- deployIGW
+    #- deploySG
+    #- deployKeys
+
+  tasks:
+    - name: Create the VMs
+      ec2_instance:
+        instance_type: "{{ item.instance_type }}"
+        image_id: "{{ item.image_id }}"
+        security_group: "{{ item.security_group }}"
+        vpc_subnet_id: "{{ item.vpc_subnet_id }}"
+        key_name: "{{ item.key_name }}"
+        name: "{{ item.name }}"
+        region: "{{ region }}"
+      with_items: "{{ vms }}"
+      register: ec2
+    - name: Print instance ID
+      debug:
+        var: ec2.instance_id

@@ -1,0 +1,34 @@
+---
+- name: load AWS creds from vault + vars
+  include_vars:
+    file:
+      - /home/ubuntu/ansible/aws-credentials
+      - /home/ubuntu/ansible/variables
+
+    #vault_password_file: vault-password-file
+- name: Include the aws_auth role
+  include_role:
+    name: aws_auth
+
+- name: Install Python pip
+  apt:
+    name:
+      - python3-pip
+
+- name: Install Python reqs
+  ansible.builtin.pip:
+    name:
+      - boto3 >= 1.18.0
+      - botocore >= 1.21.0
+
+- name: Deploy new VPC
+  ec2_vpc_net:
+    name: "{{ vpc_name }}"
+    cidr_block: "{{ vpc_cidr_block }}"
+    region: "{{ region }}"
+  register: vpc
+  when: vpc_cidr_block is defined
+
+- name: Output the VPC ID
+  debug:
+    var: vpc.vpc.id
