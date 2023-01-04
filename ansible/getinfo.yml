@@ -1,0 +1,37 @@
+---
+- name: Deploy EC2 instance on AWS
+  vars_files:
+    - /home/ubuntu/ansible/aws-credentials
+    - /home/ubuntu/ansible/config.yml
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ aws_secret_key }}"
+  hosts: localhost
+  connection: local
+  become: true
+  gather_facts: false
+  tasks:
+#     - name: Get list of hosts under [webservers] section
+#       ini_file:
+#         path: "{{hostpath}}"
+#         section: webservers
+#         allow_no_value: true
+#       register: webservers_hosts_ids
+
+#     - debug:
+#         msg: "Hosts in [webservers] section: {{ webservers_hosts_ids.hosts }}"
+
+    - name: Get list of VMs
+      ec2_instance_info:
+        region: "{{ region }}"
+        instance_ids: "i-0392e3c462bfceb1e,i-0b6363463ba6262fd"
+      register: vms
+    - name: Print list of VMs and their IPs
+      debug:
+        msg: "Instance {{ item.instance_id }} has public IP {{ item.public_ip_address  }}"
+      loop: "{{ vms.instances }}"
+
+    - name: Log Date action
+      lineinfile:
+        path: "{{output}}"
+        line: "# The task executed at {{vms.instances[0].launch_time}}\n"
