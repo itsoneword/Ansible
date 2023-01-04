@@ -1,4 +1,3 @@
-```YAML
 ---
 - name: Deploy EC2 instance on AWS
   vars_files:
@@ -68,4 +67,3 @@
       loop: "{{ vms.instances  }}"
 
       #run_once: true               #might be useful in specific conditions
-```
