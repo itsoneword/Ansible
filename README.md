@@ -279,10 +279,27 @@ $: aws ec2 run-instances --image-id <ami-id> --count 1 --instance-type t2.micro 
 # ami-0a261c0e5f51090b1 - amazon linux
 # [for refference](https://cloud-images.ubuntu.com/locator/ec2/)
 
-
+```
 
 ### 4. Setting up ansible
+We figured it out how to deploy AWS instances via AWS CLI. Let's now automate this process.
+First we will need to [install ansible](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html) itself. Its covered pretty well in the user guide so lets skip it here.
+We will need [amazon aws](https://docs.ansible.com/ansible/latest/collections/amazon/aws/ec2_instance_module.html#ansible-collections-amazon-aws-ec2-instance-module) as well:
+```bash
+$ ansible-galaxy collection install amazon.aws
+```
+and dependencies:
+**python >= 3.6
+boto3 >= 1.18.0
+botocore >= 1.21.0**
+
 
 ### 5. Playbooks
+
+#### 5.1 Authentication
+#### 5.2 Config file
+#### 5.3 Deploy instance
+
+
 
 ### 6. Testing\Running
