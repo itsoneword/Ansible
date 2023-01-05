@@ -282,24 +282,139 @@ $: aws ec2 run-instances --image-id <ami-id> --count 1 --instance-type t2.micro 
 ```
 
 ### 4. Setting up ansible
-We figured it out how to deploy AWS instances via AWS CLI. Let's now automate this process.
+
+All right, once we have common understanding of how to deploy AWS EC2 instance via awscli, we probably interested in automatization of this process. During deploying infrastructure we need to know the following:
+* VPC where we want to deploy instances
+* GW used for this VPC
+* Subnets we would like to use
+* Routes for subnets
+* Number of instances assigned to subnets.
+
+so, to do so JSON seems to be a good idea. Lets consider the following structure
+```json
+{
+	"VPCs" : [
+		"CidrBlock" : "192.168.30.0/24"
+		"Networks" : [
+			"Subnet" : "192.168.30.0/26"
+			"Gateway" : "ID if exists"
+			"RouteTable" : "ID if exists"
+			"Routes" : [
+				"RTid, Destination, IGWid"
+				"RTid, Destination, IGWid"
+						]	
+		]]}
+```
+
 First we will need to [install ansible](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html) itself. Its covered pretty well in the user guide so lets skip it here.
-We will need [amazon aws](https://docs.ansible.com/ansible/latest/collections/amazon/aws/ec2_instance_module.html#ansible-collections-amazon-aws-ec2-instance-module) as well:
+[Amazon aws](https://docs.ansible.com/ansible/latest/collections/amazon/aws/ec2_instance_module.html#ansible-collections-amazon-aws-ec2-instance-module) as well:
+
 ```bash
 $ ansible-galaxy collection install amazon.aws
-```
 and dependencies:
-**python >= 3.6
-boto3 >= 1.18.0
-botocore >= 1.21.0**
-
+** python >= 3.6 **
+** boto3 >= 1.18.0 **
+** botocore >= 1.21.0 **
+```
 
 ### 5. Playbooks
 
+This setup will have 2 different playbooks:
+
+**Deployment of instance:**
+An example of deployment via ansible playbook is described in deployInstance.yml file.
+
+**Deployment of network**
+[TBD]
+
 #### 5.1 Authentication
+roles/aws_auth/tasks/main.yml
+
 #### 5.2 Config file
+config.yml 
+
+has the following structure:
+
+**#Global variables - needed for minimal deployment:**  
+```yml
+instance_type: t2.micro
+image_id: ami-06ce824c157700cd2
+key_name: KeyName
+security_group: sg-********
+vpc_subnet_id: subnet-********
+```
+
+**#Optional parameters:**
+```yml
+device_name: "/dev/sda1"
+volume_type: "gp3"
+number_instances: 2
+volume_size: 8
+count: 1
+```
+
+more details in [AWS.ec2_instance module documentation](https://docs.ansible.com/ansible/latest/collections/amazon/aws/ec2_instance_module.html#ansible-collections-amazon-aws-ec2-instance-module)
+
+**#item properties (VMs to deploy)**
+
+```yml
+vms:
+#example 1, only minimal requirments.
+
+  - region: "{{region}}"
+    instance_type: "{{ instance_type }}"
+    image_id: "{{ image_id }}"
+    security_group: "{{ security_group }}"
+    vpc_subnet_id: "{{ vpc_subnet_id }}"
+    key_name: "{{ key_name }}"
+
+#example2 with additional properties
+  - instance_type: "{{ instance_type }}"
+    vpc_subnet_id: "{{ vpc_subnet_id }}"
+    image_id: "{{ image_id }}"
+	count: 3
+	network:
+      assign_public_ip: true
+    volumes:
+      - device_name: "{{ device_name }}"
+        ebs:
+          volume_type: "{{volume_type}}"
+          volume_size: "{{volume_size}}"
+    security_group: "{{ security_group }}"
+    key_name: "{{ key_name }}"
+```
+
 #### 5.3 Deploy instance
 
+So once the config file is quite set up with the variables, let's have a look at the deployment task:
 
+```yml
+    - name: Create EC2 instances 
+      ec2_instance:
+        instance_type: "{{item.instance_type}}"
+        image_id: "{{ item.image_id }}"
+        region: "{{ item.region | default('region') }}" #using region from config.vms or default one
+        count: "{{item.count| default(1)}}" #default VM count 1
+        vpc_subnet_id: "{{ item.vpc_subnet_id | default('vpc_subnet_id')}}"
+        network:
+          assign_public_ip: "{{item.network.assign_public_ip| default('false')}}"
+        security_group: "{{ item.security_group }}"
+        key_name: "{{ item.key_name }}"
+        volumes:
+          - device_name: "{{ item.volumes.device_name | default(device_name) }}"
+            ebs:
+              volume_type: "{{ item.volumes.ebs.volume_type | default(volume_type)}}"
+              volume_size: "{{ item.volumes.ebs.volume_size | default(volume_size) }}"
+        wait_timeout: 300 #300 sec of waiting while VMs being deployed and started to get IP addresses
+        state: started
+        tags:
+          Name: "{{item.tags.Name| default('testVM')}}"
+      loop: "{{vms}}"
+      register: deployed_vms
+```
+
+it is to be seen, if the parameter is not set up for *item*, then task takes a global variable or hardcoded value (e.g. count: 1).
+
+**note: if *Parameter* is not specified in the Playbook Task, but specified in the *Item*, it will not be considered, thus - the property will not be assisgned. if you need to add extra settings during the deployment - adjustment of the playbook is required.**
 
 ### 6. Testing\Running

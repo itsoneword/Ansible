@@ -1,53 +1,59 @@
 ---
-      #if vpc_id \ vpc_subnet_id  not defined, create a new one
+#         Network and Location settings
 vpc_cidr_block: 192.168.100.0/24
 region: eu-central-1
 vpc_name: testvpcname
 hostpath: "/home/ubuntu/ansible/hosts"
 output: "/home/ubuntu/ansible/output_log.yml"
 
-    #create security group\s if not defined
-
-    #create key_pair if not defined
-
-    #variables  for instance deployment
+#create security group\s if not defined
+#create key_pair if not defined
 
 
-      #  
-      #         Deployment EC2 instance on AWS, required parameters in variables
-      #         the values might be changed for particular VMs as well
+#         Global variables  for instance deployment
+#         Deployment EC2 instance on AWS, required parameters in variables
+#         the values might be changed for particular VMs as well
 
-instance_type: t2.micro 
+instance_type: t2.micro
 image_id: ami-06ce824c157700cd2
-keypair: ExchPair
+key_name: ExchPair
 security_group: sg-034bceb76fae44ec5
 vpc_subnet_id: subnet-01bad4acbbef2bd1f
+device_name: "/dev/sda1"
+volume_type: "gp3"
 
-#       optional parameters:
-#
-# assign_public_ip: true
-# tags:
+#optional parameters:
+
+#assign_public_ip: true
+number_instances: 2
+volume_size: 8
+#tags:
 #   name: instancename
 #   service: webservice
-# count: 3  #number of VMs of this type
+#count: number of VMs of this type
 
+vms:
+  #- name: "vm1_viaans"
+  - region: "{{region}}"
+    instance_type: "{{ instance_type }}"
+    image_id: "{{ image_id }}"
+    count: "{{number_instances}}" #the number of instances with these params.
+    network:
+      assign_public_ip: true
+    security_group: "{{ security_group }}"
+    vpc_subnet_id: "{{ vpc_subnet_id }}"
+    key_name: "{{ key_name }}"
+    tags:
+      Name: Webservice
 
-    #[TBD] VM specify VM instance settings as objects in config file to deploy from 1 config file 
-
-# vms:
-
-#   - instance_type: t2.micro
-#     image_id: "{{ image_id }}"
-#     count: 2 #the number of instances with these params.
-#     assign_public_ip: true
-#     security_group: "{{ security_group }}"
-#     vpc_subnet_id: "{{ vpc_subnet_id }}"
-#     key_name: "{{ keypair }}"
-#     tags:
-#       Name: Webservice
-#   - name: "vm2_viaans"
-#     instance_type: t2.micro
-#     vpc_subnet_id: "{{ vpc_subnet_id }}"
-#     image_id: "{{ image_id }}"
-#     security_group: "{{ security_group }}"
-#     key_name: "{{ keypair }}"
+  - name: "vm2_viaans"
+    instance_type: "{{ instance_type }}"
+    vpc_subnet_id: "{{ vpc_subnet_id }}"
+    image_id: "{{ image_id }}"
+    volumes:
+      - device_name: "{{ device_name }}"
+        ebs:
+          volume_type: "{{volume_type}}"
+          volume_size: "{{volume_size}}"
+    security_group: "{{ security_group }}"
+    key_name: "{{ key_name }}"

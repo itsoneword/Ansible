@@ -19,51 +19,53 @@
     #- deployKeys
 
   tasks:
-    - name: Create EC2 instances
+    - name: Create EC2 instances 
       ec2_instance:
-        instance_type: t2.micro
-        image_id: "{{ image_id }}"
-        region: "{{ region}}"
-        count: 2                                 #number of instances to deploy with such settings
-        vpc_subnet_id: "{{ vpc_subnet_id }}"
+        instance_type: "{{item.instance_type}}"
+        image_id: "{{ item.image_id }}"
+        region: "{{ item.region | default('region') }}" #using region from config.vms or default one
+        count: "{{item.count| default(1)}}"
+        vpc_subnet_id: "{{ item.vpc_subnet_id | default('vpc_subnet_id')}}"
         network:
-          assign_public_ip: true                  #whether or not assign public IP to the instance (no by default)
-        security_group: "{{ security_group }}"
-        key_name: "{{ keypair }}"
-        volumes:                                  #disk settings. Optional 
-          - device_name: /dev/sda1
+          assign_public_ip: "{{item.network.assign_public_ip| default('false')}}"
+        security_group: "{{ item.security_group }}"
+        key_name: "{{ item.key_name }}"
+        volumes:
+          - device_name: "{{ item.volumes.device_name | default(device_name) }}"
             ebs:
-              volume_type: gp3
-              volume_size: 8
-        wait_timeout: 120                       #timeout till the condition in 'state' is met. 
-        state: started                          #different states to wait. If we want to get IP as an output for further usage - 'started' is required.
+              volume_type: "{{ item.volumes.ebs.volume_type | default(volume_type)}}"
+              volume_size: "{{ item.volumes.ebs.volume_size | default(volume_size) }}"
+        wait_timeout: 300 #300 sec of waiting while VMs being deployed and started to get IP addresses
+        state: started
         tags:
-          Name: myinstance
-      register: vms                             #save all the instances deployed as objects to iterate later
+          Name: "{{item.tags.Name| default('testVM')}}"
+      loop: "{{vms}}"
+      register: deployed_vms
+
+    #end of deploying!
 
     - name: Print instance ID
       debug:
         msg: "{{item.tags, item.instance_id, item.public_ip_address}}"
-      loop: "{{ vms.instances }}"
+      loop: "{{ deployed_vms.instances }}"
 
     - name: Add the newly created EC2 instance IPs to host group webservers
       lineinfile: dest={{ hostpath }}
         insertafter=x"[webservers]"
-        line="{{ item.public_ip_address }}".          #adding newly deployed VMs into hosts file 
+        line="{{ item.public_ip_address }}"
         state=present
-      loop: "{{vms.instances}}"
+      loop: "{{deployed_vms.instances}}"
 
-    - name: Log Date action
+    - name: Log Data action
       lineinfile:
         path: "{{output}}"
-        line: "# The task executed at {{vms.instances[0].launch_time}}\n"
+        line: "# The task executed at {{deployed_vms.instances[0].launch_time}}\n"
 
-    - name: Save instance names and IDs           #logging
+    - name: Save instance names and IDs
       lineinfile:
         path: "{{output}}"
         line: "#VM  is {{item.tags}} \nInstanceID: {{ item.instance_id}} \nPrivateIP: {{item.private_ip_address}} \nPublicIP: {{item.public_ip_address}}\n\n"
 
+      loop: "{{ deployed_vms.instances  }}"
 
-      loop: "{{ vms.instances  }}"
-
-      #run_once: true               #might be useful in specific conditions
+      #run_once: true
