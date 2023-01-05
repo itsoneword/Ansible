@@ -1,31 +1,31 @@
-# Deploying EC2 instances on AWS via ansible
+## Deploying EC2 instances on AWS via ansible
 
 
 ### 1. Structure
 
-#### Prod:
-2 Ubuntu distribs withthe setup:
-   * Ansible user with SSH key authentication.
-   * zsh for ansible user.
-   * Installation and version checker for services:
+Consider, we have a task to deploy the following infrastructure
 
-        Python scheduled task checking repo and mooving from 1 folder to another
-        web services showing state of the latest task
+#### Production network:
+2 Ubuntu servers  with the setup:
+   * Dedicated user with SSH key authentication.
+   * zsh for the user.
+   * Installation and version checker for services:
+   * Python 
+   * scheduled task doing anything.
+   
 #### DR:
-2 Ubuntu destribs mirroring prod. Active in case of prod load is higher then expected (80% cpu)
-   * Ansible user with SSH key auth
+2 Ubuntu servers mirroring prod. Active in case of prod load is higher then threshold. 
+   * Dedicated user with SSH key auth
    * zsh 
    * same roles as for 1st infra.
 
 #### Monitoring:
 * 1 ubuntu machine with grafana (prometey?) showing resource usage for prod and DR. web service.
 
-#### Ansible:
-* 1 ubuntu server with ansible services responsible for deploying infra.
 
-### 2. Choosing infra setup
+### 2. Choosing infrastructure setup
 
-all VMs are deployed with masterKey (should be enabled later?)
+all VMs are deployed with masterKey 
 
 #### Ansible roles:
    * user
@@ -83,9 +83,10 @@ During the procedure it would make sence to store some data as variables - it wo
 So, starting with creating VPC:
 
 ```bash
-$ aws ec2 create-vpc --cidr-block 192.168.20.0/24 
+$ aws ec2 create-vpc --cidr-block 192.168.20.0/24 		
 #where --cidr-block is the IP range of available by private cloud addresses
-#Output
+
+$ #Output
 	{
 	"Vpc": {
 		"CidrBlock": "192.168.10.0/24",
@@ -108,17 +109,18 @@ $ aws ec2 create-vpc --cidr-block 192.168.20.0/24
 		}
 	}
 
-#and I would recommend to store vpcid into the variable and config file right after that:
+#and store vpcid into the variable and config file right after that:
+
 $ aws ec2 describe-vpcs --filters Name=cidr,Values=192.168.20.0/24 | jq -r '.Vpcs | .[] | .VpcId'
-#Output:
+$ #Output:
 vpc-00756859b9e6628fb
 
 #we can also use variables for the filter, saving there cidr brfore: cidr=192.168.20.0/24
 
 $ awsvpcid=$(aws ec2 describe-vpcs --filters "Name=cidr,Values=192.168.20.0/24" | jq -r '.Vpcs | .[] | .VpcId')
 
-
 #Then storing data to the config file, just in case:
+
 $ cd ~
 $ mkdir awsConfig
 $ touch awsConfig//awsdeploy.log
@@ -372,8 +374,8 @@ vms:
   - instance_type: "{{ instance_type }}"
     vpc_subnet_id: "{{ vpc_subnet_id }}"
     image_id: "{{ image_id }}"
-	count: 3
-	network:
+    count: 3
+    network:
       assign_public_ip: true
     volumes:
       - device_name: "{{ device_name }}"
