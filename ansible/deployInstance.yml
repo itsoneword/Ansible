@@ -1,0 +1,71 @@
+---
+- name: Deploy EC2 instance on AWS
+  vars_files:
+    - /home/ubuntu/ansible/aws-credentials
+    - /home/ubuntu/ansible/config.yml
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ aws_secret_key }}"
+  hosts: localhost
+  connection: local
+  become: true
+  gather_facts: false
+  roles:
+    #- aws_auth
+    #- deployVPC
+    #- deploySubnet
+    #- deployIGW
+    #- deploySG
+    #- deployKeys
+
+  tasks:
+    - name: Create EC2 instances 
+      ec2_instance:
+        instance_type: "{{item.instance_type}}"
+        image_id: "{{ item.image_id }}"
+        region: "{{ item.region | default('region') }}" #using region from config.vms or default one
+        count: "{{item.count| default(1)}}"
+        vpc_subnet_id: "{{ item.vpc_subnet_id | default('vpc_subnet_id')}}"
+        network:
+          assign_public_ip: "{{item.network.assign_public_ip| default('false')}}"
+        security_group: "{{ item.security_group }}"
+        key_name: "{{ item.key_name }}"
+        volumes:
+          - device_name: "{{ item.volumes.device_name | default(device_name) }}"
+            ebs:
+              volume_type: "{{ item.volumes.ebs.volume_type | default(volume_type)}}"
+              volume_size: "{{ item.volumes.ebs.volume_size | default(volume_size) }}"
+        wait_timeout: 300 #300 sec of waiting while VMs being deployed and started to get IP addresses
+        state: started
+        tags:
+          Name: "{{item.tags.Name| default('testVM')}}"
+      loop: "{{vms}}"
+      register: deployed_vms
+
+    #end of deploying!
+
+    - name: Print instance ID
+      debug:
+        msg: "{{item.tags, item.instance_id, item.public_ip_address}}"
+      loop: "{{ deployed_vms.instances }}"
+
+    - name: Add the newly created EC2 instance IPs to host group webservers
+      lineinfile: dest={{ hostpath }}
+        insertafter=x"[webservers]"
+        line="{{ item.public_ip_address }}"
+        state=present
+      loop: "{{deployed_vms.instances}}"
+
+    - name: Log Data action
+      lineinfile:
+        path: "{{output}}"
+        line: "# The task executed at {{deployed_vms.instances[0].launch_time}}\n"
+
+    - name: Save instance names and IDs
+      lineinfile:
+        path: "{{output}}"
+        line: "#VM  is {{item.tags}} \nInstanceID: {{ item.instance_id}} \nPrivateIP: {{item.private_ip_address}} \nPublicIP: {{item.public_ip_address}}\n\n"
+
+      loop: "{{ deployed_vms.instances  }}"
+
+      #run_once: true
